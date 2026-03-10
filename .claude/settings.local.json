@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install)",
+      "Bash(npm run build)",
+      "Bash(npm install --save-dev concurrently)",
+      "Bash(find c:/Users/tgatt/Documents/Apps -maxdepth 3 -name Dockerfile -o -name docker-compose* -o -name *.service)",
+      "Bash(find c:/Users/tgatt/Documents/Apps -maxdepth 3 \\\\\\(-name .env* -o -name nginx.conf -o -name *.config.js \\\\\\))",
+      "Bash(find c:/Users/tgatt/Documents/Apps/Votr c:/Users/tgatt/Documents/Apps/Grouper -name *.yml -o -name *.sh -o -name nginx* -o -name ecosystem*)",
+      "Bash(git -C \"c:/Users/tgatt/Documents/Apps/Fragoo\" remote -v)",
+      "Bash(gh auth:*)"
+    ]
+  }
+}
