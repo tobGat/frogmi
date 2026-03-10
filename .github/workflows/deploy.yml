@@ -37,4 +37,4 @@ jobs:
         run: |
           ssh root@46.225.168.25 'mkdir -p /opt/apps/frogmi'
           scp server/index.js server/gameLogic.js server/package.json root@46.225.168.25:/opt/apps/frogmi/
-          ssh root@46.225.168.25 'cd /opt/apps/frogmi && npm install --production && (pm2 restart frogmi || pm2 start index.js --name frogmi -- --port 3003) && pm2 save'
+          ssh root@46.225.168.25 'cd /opt/apps/frogmi && npm install --production && (pm2 restart frogmi || PORT=3005 pm2 start index.js --name frogmi) && pm2 save'
