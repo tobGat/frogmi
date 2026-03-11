@@ -13,19 +13,20 @@ const LABELS = ["A", "B", "C", "D"];
 export default function StudentGame({ gameState }) {
   const { pin, question, answerResult } = gameState;
   const [selected, setSelected] = useState(null);
-  const [timeLeft, setTimeLeft] = useState(question?.timer || 20);
+  const [timeLeft, setTimeLeft] = useState(0);
 
   useEffect(() => {
     if (!question) return;
     setSelected(null);
-    setTimeLeft(question.timer);
-  }, [question]);
 
-  useEffect(() => {
-    if (timeLeft <= 0) return;
-    const id = setTimeout(() => setTimeLeft((t) => Math.max(0, t - 1)), 1000);
-    return () => clearTimeout(id);
-  }, [timeLeft]);
+    const tick = () => {
+      const elapsed = question.startedAt ? (Date.now() - question.startedAt) / 1000 : 0;
+      setTimeLeft(Math.max(0, Math.floor(question.timer - elapsed)));
+    };
+    tick();
+    const id = setInterval(tick, 200);
+    return () => clearInterval(id);
+  }, [question]);
 
   const answer = (index) => {
     if (selected !== null) return;

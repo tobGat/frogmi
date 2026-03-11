@@ -15,13 +15,13 @@ export default function HomeView({ setView }) {
           onClick={() => setView("teacher-setup")}
           className="flex-1 bg-violet-500 hover:bg-violet-400 active:scale-95 text-white font-black text-2xl py-8 px-6 rounded-3xl shadow-xl transition-all min-h-[120px] border-b-4 border-violet-700"
         >
-          👩‍🏫 Lehrer
+          👩‍🏫 Lehrer:in
         </button>
         <button
           onClick={() => setView("student-join")}
           className="flex-1 bg-orange-400 hover:bg-orange-300 active:scale-95 text-white font-black text-2xl py-8 px-6 rounded-3xl shadow-xl transition-all min-h-[120px] border-b-4 border-orange-600"
         >
-          🎓 Schüler
+          🎓 Schüler:in
         </button>
       </div>
     </div>

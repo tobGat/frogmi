@@ -60,6 +60,10 @@ export default function StudentJoin({ setView }) {
               onChange={(e) => setName(e.target.value)}
               onKeyDown={handleKeyDown}
               maxLength={20}
+              autoComplete="off"
+              autoCorrect="off"
+              autoCapitalize="off"
+              spellCheck="false"
               className="glass-input w-full text-2xl text-center rounded-2xl px-4 py-4"
             />
           </div>

@@ -8,7 +8,7 @@ const RANK_STYLES = [
 ];
 
 export default function Leaderboard({ gameState, goHome }) {
-  const { pin, leaderboard, isLastQuestion, role, currentQuestion, totalQuestions } = gameState;
+  const { pin, leaderboard, isLastQuestion, role, currentQuestion, totalQuestions, answerResult } = gameState;
 
   const nextQuestion = () => {
     socket.emit("next_question", { pin });
@@ -28,6 +28,32 @@ export default function Leaderboard({ gameState, goHome }) {
           <p className="text-white/60 text-center mb-6 text-sm font-semibold">
             Frage {currentQuestion + 1} von {totalQuestions} abgeschlossen
           </p>
+        )}
+
+        {/* Antwort-Feedback für Schüler */}
+        {role === "student" && (
+          answerResult ? (
+            <div className={`glass rounded-2xl px-5 py-4 mb-6 flex items-center gap-4 border-2 ${
+              answerResult.correct ? "border-emerald-400" : "border-red-400"
+            }`}>
+              <span className="text-4xl">{answerResult.correct ? "✅" : "❌"}</span>
+              <div>
+                <p className="font-black text-lg">
+                  {answerResult.correct ? "Richtig!" : "Falsch!"}
+                </p>
+                {answerResult.correct ? (
+                  <p className="text-yellow-300 font-bold">+{answerResult.points} Punkte</p>
+                ) : (
+                  <p className="text-white/60 font-semibold text-sm">Leider keine Punkte</p>
+                )}
+              </div>
+            </div>
+          ) : !isLastQuestion ? (
+            <div className="glass rounded-2xl px-5 py-4 mb-6 flex items-center gap-4 border-2 border-white/20">
+              <span className="text-4xl">⏱️</span>
+              <p className="font-bold text-white/70">Zeit abgelaufen – keine Antwort</p>
+            </div>
+          ) : null
         )}
 
         {/* Podest – Top 3 */}

@@ -142,10 +142,10 @@ io.on("connection", (socket) => {
 // ─── HILFSFUNKTIONEN ─────────────────────────────────────────────────────────
 
 function sendQuestion(pin) {
+  gl.startQuestionTimer(pin); // erst Timer starten, damit startedAt in getCurrentQuestion korrekt ist
   const q = gl.getCurrentQuestion(pin);
   if (!q) return;
 
-  gl.startQuestionTimer(pin);
   io.to(pin).emit("show_question", q);
 
   // Auto-Leaderboard nach Timer-Ablauf

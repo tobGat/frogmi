@@ -58,13 +58,15 @@ export default function App() {
     });
 
     socket.on("show_question", (question) => {
-      setGameState((s) => ({
-        ...s,
-        question,
-        answerResult: null,
-        answeredCount: { answered: 0, total: s.players.length },
-      }));
-      setView((prev) => (prev.startsWith("teacher") ? "teacher-game" : "student-game"));
+      setGameState((s) => {
+        setView(s.role === "teacher" ? "teacher-game" : "student-game");
+        return {
+          ...s,
+          question,
+          answerResult: null,
+          answeredCount: { answered: 0, total: s.players.length },
+        };
+      });
     });
 
     socket.on("show_leaderboard", ({ leaderboard, isLast, currentQuestion, totalQuestions }) => {

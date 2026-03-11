@@ -73,6 +73,7 @@ function getCurrentQuestion(pin) {
     text: q.text,
     answers: q.answers,
     timer: q.timer || 20,
+    startedAt: game.questionStart,
   };
 }
 
@@ -99,7 +100,10 @@ function submitAnswer(pin, socketId, answerIndex) {
   let points = 0;
 
   if (correct) {
-    points = Math.max(100, Math.round(1000 * (1 - responseMs / (timerSeconds * 1000))));
+    const fraction = 1 - responseMs / (timerSeconds * 1000);
+    if (fraction >= 0) {
+      points = Math.max(100, Math.round(1000 * fraction));
+    }
   }
 
   player.answered = true;
