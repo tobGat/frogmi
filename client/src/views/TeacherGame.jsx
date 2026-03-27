@@ -29,6 +29,9 @@ export default function TeacherGame({ gameState, goHome }) {
   if (!question) return null;
 
   const progress = (timeLeft / question.timer) * 100;
+  const isTF = question.type === "tf";
+  const urgentThreshold = isTF ? 3 : 5;
+  const isUrgent = timeLeft <= urgentThreshold;
 
   return (
     <div className="min-h-screen flex flex-col px-4 py-6">
@@ -38,6 +41,7 @@ export default function TeacherGame({ gameState, goHome }) {
           PIN: <strong className="text-yellow-300">{pin}</strong>
         </span>
         <span className="text-white/70 font-semibold text-sm">
+          {isTF && <span className="text-orange-300 mr-1">⚡</span>}
           Frage {question.index + 1} / {question.total}
         </span>
         <button onClick={goHome} className="text-white/50 hover:text-white text-sm font-semibold">
@@ -48,16 +52,16 @@ export default function TeacherGame({ gameState, goHome }) {
       {/* Timer */}
       <div className="glass rounded-2xl px-4 py-3 mb-4">
         <div className="flex justify-between text-sm mb-2">
-          <span className="text-white/70 font-semibold">Zeit</span>
-          <span className={`font-black text-xl ${timeLeft <= 5 ? "text-red-300" : "text-white"}`}>
+          <span className="text-white/70 font-semibold">{isTF ? "⚡ Speed-Runde" : "Zeit"}</span>
+          <span className={`font-black text-xl ${isUrgent ? "text-red-300" : "text-white"} ${isTF && isUrgent ? "animate-streak-fire" : ""}`}>
             {timeLeft}s
           </span>
         </div>
-        <div className="h-4 bg-white/20 rounded-full overflow-hidden">
+        <div className={`${isTF ? "h-5" : "h-4"} bg-white/20 rounded-full overflow-hidden`}>
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
-              timeLeft <= 5 ? "bg-red-400" : timeLeft <= 10 ? "bg-amber-400" : "bg-emerald-400"
-            }`}
+              isUrgent ? "bg-red-400" : isTF ? "bg-orange-400" : timeLeft <= 10 ? "bg-amber-400" : "bg-emerald-400"
+            } ${isTF && isUrgent ? "animate-pulse" : ""}`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -69,19 +73,32 @@ export default function TeacherGame({ gameState, goHome }) {
       </div>
 
       {/* Antworten */}
-      <div className="grid grid-cols-2 gap-4 mb-5">
-        {question.answers.map((ans, i) => (
-          <div
-            key={i}
-            className={`${COLORS[i]} border-2 rounded-2xl p-5 flex items-center gap-3 shadow-lg`}
-          >
-            <span className="text-2xl font-black w-10 h-10 bg-black/20 rounded-xl flex items-center justify-center shrink-0">
-              {LABELS[i]}
-            </span>
-            <span className="text-xl font-bold leading-tight">{ans}</span>
+      {isTF ? (
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          <div className="bg-emerald-500 border-2 border-emerald-300 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 shadow-lg">
+            <span className="text-5xl font-black">✓</span>
+            <span className="text-4xl font-black">Wahr</span>
           </div>
-        ))}
-      </div>
+          <div className="bg-rose-500 border-2 border-rose-300 rounded-2xl p-8 flex flex-col items-center justify-center gap-3 shadow-lg">
+            <span className="text-5xl font-black">✗</span>
+            <span className="text-4xl font-black">Falsch</span>
+          </div>
+        </div>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 mb-5">
+          {question.answers.map((ans, i) => (
+            <div
+              key={i}
+              className={`${COLORS[i]} border-2 rounded-2xl p-5 flex items-center gap-3 shadow-lg`}
+            >
+              <span className="text-2xl font-black w-10 h-10 bg-black/20 rounded-xl flex items-center justify-center shrink-0">
+                {LABELS[i]}
+              </span>
+              <span className="text-xl font-bold leading-tight">{ans}</span>
+            </div>
+          ))}
+        </div>
+      )}
 
       {/* Live-Statistik */}
       <div className="glass rounded-2xl p-4 text-center">

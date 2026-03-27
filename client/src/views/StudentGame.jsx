@@ -37,6 +37,9 @@ export default function StudentGame({ gameState }) {
   if (!question) return null;
 
   const progress = (timeLeft / question.timer) * 100;
+  const isTF = question.type === "tf";
+  const urgentThreshold = isTF ? 3 : 5;
+  const isUrgent = timeLeft <= urgentThreshold;
 
   return (
     <div className="flex flex-col min-h-screen px-4 py-6">
@@ -44,17 +47,18 @@ export default function StudentGame({ gameState }) {
       <div className="glass rounded-2xl px-4 py-3 mb-4">
         <div className="flex justify-between text-sm mb-2">
           <span className="text-white/70 font-semibold">
+            {isTF && <span className="text-orange-300 mr-1">⚡</span>}
             Frage {question.index + 1} / {question.total}
           </span>
-          <span className={`font-black text-lg ${timeLeft <= 5 ? "text-red-300" : "text-white"}`}>
+          <span className={`font-black text-lg ${isUrgent ? "text-red-300" : "text-white"} ${isTF && isUrgent ? "animate-streak-fire" : ""}`}>
             {timeLeft}s
           </span>
         </div>
-        <div className="h-3 bg-white/20 rounded-full overflow-hidden">
+        <div className={`${isTF ? "h-4" : "h-3"} bg-white/20 rounded-full overflow-hidden`}>
           <div
             className={`h-full rounded-full transition-all duration-1000 ${
-              timeLeft <= 5 ? "bg-red-400" : "bg-emerald-400"
-            }`}
+              isUrgent ? "bg-red-400" : isTF ? "bg-orange-400" : "bg-emerald-400"
+            } ${isTF && isUrgent ? "animate-pulse" : ""}`}
             style={{ width: `${progress}%` }}
           />
         </div>
@@ -67,19 +71,42 @@ export default function StudentGame({ gameState }) {
 
       {/* Antwort-Buttons */}
       {selected === null ? (
-        <div className="grid grid-cols-2 gap-4 flex-1">
-          {question.answers.map((ans, i) => (
+        isTF ? (
+          /* Wahr/Falsch – 2 große Buttons */
+          <div className="grid grid-cols-2 gap-4 flex-1">
             <button
-              key={i}
-              onClick={() => answer(i)}
+              onClick={() => answer(0)}
               disabled={timeLeft === 0}
-              className={`${COLORS[i]} text-white font-black text-xl rounded-2xl p-6 flex flex-col items-center justify-center gap-2 min-h-[120px] transition-all active:scale-95 shadow-xl border-b-4 disabled:opacity-50`}
+              className="bg-emerald-500 hover:bg-emerald-400 active:bg-emerald-600 border-emerald-700 text-white font-black text-3xl rounded-2xl p-6 flex flex-col items-center justify-center gap-3 min-h-[200px] transition-all active:scale-95 shadow-xl border-b-4 disabled:opacity-50"
             >
-              <span className="text-3xl">{SHAPES[i]}</span>
-              <span className="text-sm font-bold text-center leading-tight">{ans}</span>
+              <span className="text-5xl">✓</span>
+              <span>Wahr</span>
             </button>
-          ))}
-        </div>
+            <button
+              onClick={() => answer(1)}
+              disabled={timeLeft === 0}
+              className="bg-rose-500 hover:bg-rose-400 active:bg-rose-600 border-rose-700 text-white font-black text-3xl rounded-2xl p-6 flex flex-col items-center justify-center gap-3 min-h-[200px] transition-all active:scale-95 shadow-xl border-b-4 disabled:opacity-50"
+            >
+              <span className="text-5xl">✗</span>
+              <span>Falsch</span>
+            </button>
+          </div>
+        ) : (
+          /* Multiple Choice – 2x2 Grid */
+          <div className="grid grid-cols-2 gap-4 flex-1">
+            {question.answers.map((ans, i) => (
+              <button
+                key={i}
+                onClick={() => answer(i)}
+                disabled={timeLeft === 0}
+                className={`${COLORS[i]} text-white font-black text-xl rounded-2xl p-6 flex flex-col items-center justify-center gap-2 min-h-[120px] transition-all active:scale-95 shadow-xl border-b-4 disabled:opacity-50`}
+              >
+                <span className="text-3xl">{SHAPES[i]}</span>
+                <span className="text-sm font-bold text-center leading-tight">{ans}</span>
+              </button>
+            ))}
+          </div>
+        )
       ) : (
         <div className="flex-1 flex flex-col items-center justify-center">
           {answerResult ? (
@@ -94,6 +121,15 @@ export default function StudentGame({ gameState }) {
                 <p className="text-yellow-300 text-4xl font-black drop-shadow">
                   +{answerResult.points} Punkte
                 </p>
+              )}
+              {answerResult.correct && answerResult.streak >= 2 && (
+                <div className="mt-3 animate-streak-fire">
+                  <span className={`text-3xl font-black drop-shadow-lg ${
+                    answerResult.streak >= 5 ? "text-red-300" : "text-orange-300"
+                  }`}>
+                    {answerResult.streak >= 5 ? "\u{1F525}\u{1F525}" : "\u{1F525}"} {answerResult.streak}er Streak!
+                  </span>
+                </div>
               )}
               <p className="text-white/60 mt-3 font-semibold">
                 Gesamt: <strong className="text-white">{answerResult.totalScore}</strong>

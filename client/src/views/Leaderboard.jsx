@@ -21,7 +21,7 @@ export default function Leaderboard({ gameState, goHome }) {
   return (
     <div className="flex flex-col items-center min-h-screen px-4 py-8">
       <div className="w-full max-w-lg">
-        <h1 className="text-4xl font-black text-center mb-1 drop-shadow">
+        <h1 className={`text-4xl font-black text-center mb-1 drop-shadow ${isLastQuestion ? "animate-slide-in" : ""}`}>
           {isLastQuestion ? "🏆 Endauswertung" : "📊 Rangliste"}
         </h1>
         {!isLastQuestion && (
@@ -46,6 +46,13 @@ export default function Leaderboard({ gameState, goHome }) {
                 ) : (
                   <p className="text-white/60 font-semibold text-sm">Leider keine Punkte</p>
                 )}
+                {answerResult.correct && answerResult.streak >= 2 && (
+                  <p className={`font-black mt-1 animate-streak-fire ${
+                    answerResult.streak >= 5 ? "text-red-300" : "text-orange-300"
+                  }`}>
+                    {answerResult.streak >= 5 ? "\u{1F525}\u{1F525}" : "\u{1F525}"} {answerResult.streak}er Streak!
+                  </p>
+                )}
               </div>
             </div>
           ) : !isLastQuestion ? (
@@ -60,25 +67,25 @@ export default function Leaderboard({ gameState, goHome }) {
         {isLastQuestion && leaderboard.length >= 3 && (
           <div className="flex items-end justify-center gap-3 mb-8 mt-4">
             {/* 2. Platz */}
-            <div className="flex flex-col items-center">
-              <span className="text-4xl">{MEDALS[1]}</span>
-              <div className="glass rounded-t-2xl w-24 h-20 flex flex-col items-center justify-center mt-2 border border-slate-300/40">
+            <div className="flex flex-col items-center animate-podium-rise" style={{ animationDelay: '0.5s' }}>
+              <span className="text-4xl animate-crown-drop" style={{ animationDelay: '0.9s' }}>{MEDALS[1]}</span>
+              <div className="glass rounded-2xl w-28 h-24 flex flex-col items-center justify-center mt-2 border-2 border-slate-300/50 animate-podium-glow-silver" style={{ animationDelay: '1.2s' }}>
                 <p className="font-bold text-sm text-center px-1 leading-tight">{leaderboard[1]?.name}</p>
-                <p className="text-yellow-300 text-xs font-black">{leaderboard[1]?.score}</p>
+                <p className="text-yellow-300 text-sm font-black">{leaderboard[1]?.score}</p>
               </div>
             </div>
             {/* 1. Platz */}
-            <div className="flex flex-col items-center">
-              <span className="text-5xl animate-bounce">{MEDALS[0]}</span>
-              <div className="glass rounded-t-2xl w-28 h-28 flex flex-col items-center justify-center mt-2 border-2 border-yellow-400">
-                <p className="font-black text-sm text-center px-1 leading-tight">{leaderboard[0]?.name}</p>
-                <p className="text-yellow-300 font-black text-base">{leaderboard[0]?.score}</p>
+            <div className="flex flex-col items-center podium-confetti animate-podium-rise" style={{ animationDelay: '0.9s' }}>
+              <span className="text-6xl animate-crown-drop" style={{ animationDelay: '1.3s' }}>{MEDALS[0]}</span>
+              <div className="glass rounded-2xl w-32 h-36 flex flex-col items-center justify-center mt-2 border-3 border-yellow-400 animate-podium-glow-gold" style={{ animationDelay: '1.6s' }}>
+                <p className="font-black text-base text-center px-1 leading-tight">{leaderboard[0]?.name}</p>
+                <p className="text-yellow-300 font-black text-lg">{leaderboard[0]?.score}</p>
               </div>
             </div>
             {/* 3. Platz */}
-            <div className="flex flex-col items-center">
-              <span className="text-4xl">{MEDALS[2]}</span>
-              <div className="glass rounded-t-2xl w-24 h-16 flex flex-col items-center justify-center mt-2 border border-amber-600/40">
+            <div className="flex flex-col items-center animate-podium-rise" style={{ animationDelay: '0.2s' }}>
+              <span className="text-4xl animate-crown-drop" style={{ animationDelay: '0.6s' }}>{MEDALS[2]}</span>
+              <div className="glass rounded-2xl w-28 h-20 flex flex-col items-center justify-center mt-2 border-2 border-amber-600/50 animate-podium-glow-bronze" style={{ animationDelay: '0.9s' }}>
                 <p className="font-bold text-sm text-center px-1 leading-tight">{leaderboard[2]?.name}</p>
                 <p className="text-yellow-300 text-xs font-black">{leaderboard[2]?.score}</p>
               </div>
@@ -88,20 +95,43 @@ export default function Leaderboard({ gameState, goHome }) {
 
         {/* Liste */}
         <div className="space-y-2 mb-8">
-          {leaderboard.map((p, i) => (
-            <div
-              key={i}
-              className={`flex items-center gap-4 rounded-xl px-4 py-3 border glass ${
-                i < 3 && isLastQuestion ? RANK_STYLES[i] : "border-white/20"
-              }`}
-            >
-              <span className="text-2xl w-8 text-center font-black">
-                {i < 3 && isLastQuestion ? MEDALS[i] : <span className="text-white/50">{p.rank}.</span>}
-              </span>
-              <span className="flex-1 font-bold text-lg">{p.name}</span>
-              <span className="font-black text-yellow-300 text-xl">{p.score}</span>
-            </div>
-          ))}
+          {leaderboard.map((p, i) => {
+            const isRankJump = p.rankChange >= 2;
+            return (
+              <div
+                key={i}
+                className={`flex items-center gap-4 rounded-xl px-4 py-3 border glass ${
+                  isRankJump
+                    ? "animate-rank-jump border-emerald-400 bg-emerald-400/15"
+                    : `animate-slide-in ${i < 3 && isLastQuestion ? RANK_STYLES[i] : "border-white/20"}`
+                }`}
+                style={{ animationDelay: `${i * 100}ms` }}
+              >
+                <span className="text-2xl w-8 text-center font-black">
+                  {i < 3 && isLastQuestion ? MEDALS[i] : <span className="text-white/50">{p.rank}.</span>}
+                </span>
+                <span className="flex-1 font-bold text-lg flex items-center gap-2">
+                  {p.name}
+                  {p.streak >= 3 && (
+                    <span className="animate-streak-pulse text-sm bg-orange-500/30 rounded-full px-2 py-0.5 border border-orange-400/50">
+                      {"\u{1F525}"} {p.streak}
+                    </span>
+                  )}
+                </span>
+                <div className="flex items-center gap-2">
+                  {isRankJump && (
+                    <span className="animate-rank-arrow text-emerald-300 font-black text-sm">
+                      ▲{p.rankChange}
+                    </span>
+                  )}
+                  {p.rankChange <= -2 && (
+                    <span className="text-red-300/60 text-sm">▼{Math.abs(p.rankChange)}</span>
+                  )}
+                  <span className="font-black text-yellow-300 text-xl">{p.score}</span>
+                </div>
+              </div>
+            );
+          })}
         </div>
 
         {/* Lehrer-Buttons */}

@@ -21,6 +21,7 @@ function createGame(questions, teacherSocketId) {
     players: {},
     teacherSocketId,
     answerTimer: null,
+    previousLeaderboard: {},
   };
 
   return pin;
@@ -38,7 +39,7 @@ function addPlayer(pin, socketId, name) {
   const nameTaken = Object.values(game.players).some((p) => p.name === name);
   if (nameTaken) return { error: "Dieser Name ist bereits vergeben" };
 
-  game.players[socketId] = { name, score: 0, answers: {}, answered: false };
+  game.players[socketId] = { name, score: 0, answers: {}, answered: false, streak: 0 };
   return { success: true };
 }
 
@@ -74,6 +75,7 @@ function getCurrentQuestion(pin) {
     answers: q.answers,
     timer: q.timer || 20,
     startedAt: game.questionStart,
+    type: q.type || "mc",
   };
 }
 
@@ -81,6 +83,12 @@ function startQuestionTimer(pin) {
   const game = games[pin];
   if (!game) return;
   game.questionStart = Date.now();
+  // Streak-Reset für Spieler, die letzte Frage nicht beantwortet haben
+  if (game.currentQuestion > 0) {
+    Object.values(game.players).forEach((p) => {
+      if (p.answers[game.currentQuestion - 1] === undefined) p.streak = 0;
+    });
+  }
   // Reset answered flags
   Object.values(game.players).forEach((p) => (p.answered = false));
 }
@@ -104,13 +112,16 @@ function submitAnswer(pin, socketId, answerIndex) {
     if (fraction >= 0) {
       points = Math.max(100, Math.round(1000 * fraction));
     }
+    player.streak += 1;
+  } else {
+    player.streak = 0;
   }
 
   player.answered = true;
   player.score += points;
   player.answers[game.currentQuestion] = { answerIndex, correct, points };
 
-  return { correct, points, totalScore: player.score };
+  return { correct, points, totalScore: player.score, streak: player.streak };
 }
 
 function getAnsweredCount(pin) {
@@ -133,10 +144,23 @@ function allAnswered(pin) {
 function getLeaderboard(pin) {
   const game = games[pin];
   if (!game) return [];
-  return Object.values(game.players)
+  const prev = game.previousLeaderboard || {};
+
+  const sorted = Object.values(game.players)
     .sort((a, b) => b.score - a.score)
     .slice(0, 10)
-    .map((p, i) => ({ rank: i + 1, name: p.name, score: p.score }));
+    .map((p, i) => {
+      const rank = i + 1;
+      const prevRank = prev[p.name];
+      const rankChange = prevRank != null ? prevRank - rank : 0;
+      return { rank, name: p.name, score: p.score, streak: p.streak, rankChange };
+    });
+
+  const newPrev = {};
+  sorted.forEach((p) => { newPrev[p.name] = p.rank; });
+  game.previousLeaderboard = newPrev;
+
+  return sorted;
 }
 
 function advanceQuestion(pin) {
