@@ -19,9 +19,16 @@ export default function StudentGame({ gameState }) {
     if (!question) return;
     setSelected(null);
 
+    // Record the moment this client received the question.
+    // Add whatever time had already elapsed on the server (elapsedMs) so late
+    // receivers or reconnecting students see the correct remaining time.
+    // Using local timestamps avoids server/client clock-drift bugs.
+    const clientReceivedAt = Date.now();
+    const serverElapsedMs = question.elapsedMs ?? 0;
+
     const tick = () => {
-      const elapsed = question.startedAt ? (Date.now() - question.startedAt) / 1000 : 0;
-      setTimeLeft(Math.max(0, Math.floor(question.timer - elapsed)));
+      const totalElapsed = serverElapsedMs + (Date.now() - clientReceivedAt);
+      setTimeLeft(Math.max(0, Math.floor(question.timer - totalElapsed / 1000)));
     };
     tick();
     const id = setInterval(tick, 200);

@@ -123,18 +123,53 @@ io.on("connection", (socket) => {
     }
   });
 
+  // ─── REJOIN ────────────────────────────────────────────────────────────────
+
+  socket.on("rejoin_game", ({ pin, name }) => {
+    if (!pin || !name) return;
+
+    const result = gl.rejoinPlayer(pin, socket.id, name);
+    if (result.error) {
+      socket.emit("rejoin_error", { message: result.error });
+      return;
+    }
+
+    // Cancel any pending removal for the old socket
+    if (result.prevSocketId) {
+      gl.cancelScheduledRemoval(result.prevSocketId);
+    }
+
+    socket.join(pin);
+    socket.data.pin = pin;
+    socket.data.name = name;
+
+    const state = gl.getRejoinState(pin, socket.id);
+    socket.emit("rejoin_success", state);
+
+    // Notify teacher with updated list
+    const players = gl.getPlayerList(pin);
+    const game = gl.getGame(pin);
+    if (game) {
+      io.to(game.teacherSocketId).emit("player_joined", { players });
+    }
+    console.log(`${name} wieder beigetreten: PIN ${pin}`);
+  });
+
   // ─── DISCONNECT ────────────────────────────────────────────────────────────
 
   socket.on("disconnect", () => {
     console.log(`Getrennt: ${socket.id}`);
     const pin = socket.data.pin;
     if (pin) {
-      gl.removePlayer(pin, socket.id);
-      const players = gl.getPlayerList(pin);
-      const game = gl.getGame(pin);
-      if (game) {
-        io.to(game.teacherSocketId).emit("player_joined", { players });
-      }
+      // Grace period of 12 seconds before actually removing the player.
+      // This prevents brief network hiccups or accidental refreshes from
+      // dropping the player from the teacher's lobby list immediately.
+      gl.scheduleRemovePlayer(pin, socket.id, 12000, (players) => {
+        const game = gl.getGame(pin);
+        if (game) {
+          io.to(game.teacherSocketId).emit("player_joined", { players });
+        }
+      });
     }
   });
 });
@@ -163,6 +198,7 @@ function showLeaderboard(pin) {
 
   const leaderboard = gl.getLeaderboard(pin);
   const isLast = game.currentQuestion >= game.questions.length - 1;
+  const correctAnswer = gl.getCorrectAnswerInfo(pin);
 
   game.status = "leaderboard";
   io.to(pin).emit("show_leaderboard", {
@@ -170,6 +206,7 @@ function showLeaderboard(pin) {
     isLast,
     currentQuestion: game.currentQuestion,
     totalQuestions: game.questions.length,
+    correctAnswer,
   });
 }
 

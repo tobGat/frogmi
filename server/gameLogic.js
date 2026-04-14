@@ -1,6 +1,10 @@
 // Spielzustand: alle laufenden Spiele im RAM
 const games = {};
 
+// Pending-disconnect timers: socketId → TimeoutHandle
+// Prevents immediate removal when a player briefly loses connection.
+const disconnectTimers = {};
+
 function generatePin() {
   return String(Math.floor(100000 + Math.random() * 900000));
 }
@@ -19,6 +23,9 @@ function createGame(questions, teacherSocketId) {
     timer: 20,
     questionStart: null,
     players: {},
+    // Players who were removed after the grace period but may still rejoin.
+    // Keyed by name so they can be found without a socketId.
+    formerPlayers: {},
     teacherSocketId,
     answerTimer: null,
     previousLeaderboard: {},
@@ -74,7 +81,8 @@ function getCurrentQuestion(pin) {
     text: q.text,
     answers: q.answers,
     timer: q.timer || 20,
-    startedAt: game.questionStart,
+    // Relative elapsed time (server-side) avoids client/server clock drift
+    elapsedMs: game.questionStart ? Math.max(0, Date.now() - game.questionStart) : 0,
     type: q.type || "mc",
   };
 }
@@ -183,6 +191,111 @@ function endGame(pin) {
   }
 }
 
+// ── Reconnect / Grace-Period helpers ─────────────────────────────────────────
+
+/**
+ * Schedule a player removal after `delayMs` ms.
+ * `onRemoved(players)` is called after actual deletion so the server can
+ * broadcast the updated player list to the teacher.
+ */
+function scheduleRemovePlayer(pin, socketId, delayMs, onRemoved) {
+  // Cancel any previously scheduled removal for this socket
+  if (disconnectTimers[socketId]) {
+    clearTimeout(disconnectTimers[socketId]);
+  }
+  disconnectTimers[socketId] = setTimeout(() => {
+    delete disconnectTimers[socketId];
+    const game = games[pin];
+    if (game) {
+      const player = game.players[socketId];
+      if (player) {
+        // Archive by name so the player can rejoin later with their score intact
+        game.formerPlayers[player.name] = { ...player };
+        delete game.players[socketId];
+      }
+    }
+    onRemoved(getPlayerList(pin));
+  }, delayMs);
+}
+
+/** Cancel a pending removal (called when player reconnects before timeout). */
+function cancelScheduledRemoval(socketId) {
+  if (disconnectTimers[socketId]) {
+    clearTimeout(disconnectTimers[socketId]);
+    delete disconnectTimers[socketId];
+    return true;
+  }
+  return false;
+}
+
+/**
+ * Allow a player to rejoin with a new socketId (after refresh / reconnect).
+ * Finds the existing player entry by name and re-keys it to the new socketId.
+ * Works during lobby, question, and leaderboard phases.
+ * Returns { success, prevSocketId } or { error }.
+ */
+function rejoinPlayer(pin, newSocketId, name) {
+  const game = games[pin];
+  if (!game) return { error: "Spiel nicht gefunden" };
+
+  // 1. Player is still in the active list (brief reconnect, same or new socketId)
+  const activeEntry = Object.entries(game.players).find(([, p]) => p.name === name);
+  if (activeEntry) {
+    const [prevSocketId, playerData] = activeEntry;
+    if (prevSocketId === newSocketId) return { success: true, prevSocketId: null };
+    delete game.players[prevSocketId];
+    game.players[newSocketId] = playerData;
+    return { success: true, prevSocketId };
+  }
+
+  // 2. Player was archived (grace period expired) – late rejoin with score restored
+  const archived = game.formerPlayers[name];
+  if (archived) {
+    delete game.formerPlayers[name];
+    // Reset the `answered` flag so they can participate in the current question
+    game.players[newSocketId] = { ...archived, answered: false };
+    return { success: true, prevSocketId: null };
+  }
+
+  return { error: "Spieler nicht gefunden – bitte neu beitreten" };
+}
+
+/**
+ * Return enough state for a rejoining student to continue where they left off.
+ */
+function getRejoinState(pin, socketId) {
+  const game = games[pin];
+  if (!game) return null;
+  const player = game.players[socketId];
+  return {
+    pin,
+    name: player?.name ?? null,
+    status: game.status,
+    currentQuestion: game.status === "question" ? getCurrentQuestion(pin) : null,
+    leaderboard: game.status === "leaderboard" ? getLeaderboard(pin) : null,
+    totalQuestions: game.questions.length,
+    currentQuestionIndex: game.currentQuestion,
+  };
+}
+
+/**
+ * Return info about the correct answer for the question that just finished.
+ * Used to display the solution on the leaderboard screen.
+ */
+function getCorrectAnswerInfo(pin) {
+  const game = games[pin];
+  if (!game) return null;
+  const q = game.questions[game.currentQuestion];
+  if (!q) return null;
+  const isTF = (q.type || "mc") === "tf";
+  return {
+    index: q.correct,
+    text: isTF ? (q.correct === 0 ? "Wahr" : "Falsch") : (q.answers?.[q.correct] ?? ""),
+    type: q.type || "mc",
+    label: isTF ? null : ["A", "B", "C", "D"][q.correct] ?? null,
+  };
+}
+
 function setAnswerTimer(pin, timer) {
   const game = games[pin];
   if (game) game.answerTimer = timer;
@@ -201,6 +314,11 @@ module.exports = {
   getGame,
   addPlayer,
   removePlayer,
+  scheduleRemovePlayer,
+  cancelScheduledRemoval,
+  rejoinPlayer,
+  getRejoinState,
+  getCorrectAnswerInfo,
   getPlayerList,
   startGame,
   getCurrentQuestion,

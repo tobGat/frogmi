@@ -7,8 +7,19 @@ const RANK_STYLES = [
   "border-amber-600 bg-amber-600/20",
 ];
 
+const TF_COLORS = {
+  0: "bg-emerald-500 border-emerald-300", // Wahr
+  1: "bg-rose-500 border-rose-300",        // Falsch
+};
+const MC_COLORS = [
+  "bg-rose-500 border-rose-300",
+  "bg-sky-500 border-sky-300",
+  "bg-amber-400 border-amber-200",
+  "bg-emerald-500 border-emerald-300",
+];
+
 export default function Leaderboard({ gameState, goHome }) {
-  const { pin, leaderboard, isLastQuestion, role, currentQuestion, totalQuestions, answerResult } = gameState;
+  const { pin, leaderboard, isLastQuestion, role, currentQuestion, totalQuestions, answerResult, correctAnswer } = gameState;
 
   const nextQuestion = () => {
     socket.emit("next_question", { pin });
@@ -28,6 +39,30 @@ export default function Leaderboard({ gameState, goHome }) {
           <p className="text-white/60 text-center mb-6 text-sm font-semibold">
             Frage {currentQuestion + 1} von {totalQuestions} abgeschlossen
           </p>
+        )}
+
+        {/* Richtige Antwort – Lehreransicht */}
+        {role === "teacher" && correctAnswer && !isLastQuestion && (
+          <div className="mb-6">
+            <p className="text-white/50 text-xs font-bold uppercase tracking-wider text-center mb-2">
+              Richtige Antwort
+            </p>
+            {correctAnswer.type === "tf" ? (
+              <div className={`${TF_COLORS[correctAnswer.index]} border-2 rounded-2xl px-6 py-5 flex items-center justify-center gap-4 shadow-xl`}>
+                <span className="text-5xl font-black">
+                  {correctAnswer.index === 0 ? "✓" : "✗"}
+                </span>
+                <span className="text-4xl font-black">{correctAnswer.text}</span>
+              </div>
+            ) : (
+              <div className={`${MC_COLORS[correctAnswer.index]} border-2 rounded-2xl px-6 py-5 flex items-center gap-4 shadow-xl`}>
+                <span className="text-3xl font-black w-12 h-12 bg-black/20 rounded-xl flex items-center justify-center shrink-0">
+                  {correctAnswer.label}
+                </span>
+                <span className="text-2xl font-black leading-tight">{correctAnswer.text}</span>
+              </div>
+            )}
+          </div>
         )}
 
         {/* Antwort-Feedback für Schüler */}
